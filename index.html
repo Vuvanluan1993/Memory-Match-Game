@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Memory Match Game</title>
+ <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #f0f0f0;
+    }
+    #container {
+      border: 2px solid #999;
+      border-radius: 10px;
+      width: fit-content;
+      margin: 20px auto;
+      padding: 20px;
+      background: white;
+    }
+    #game-board {
+      display: grid;
+      gap: 10px;
+      justify-content: center;
+      margin: 20px auto;
+    }
+    .card {
+      width: 80px;
+      height: 80px;
+      perspective: 600px;
+      cursor: pointer;
+    }
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.6s;
+    }
+    .card.revealed .card-inner {
+      transform: rotateY(180deg);
+    }
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      backface-visibility: hidden;
+    }
+    .card-front {
+      background: gray;
+      color: white;
+    }
+    .card-back {
+      background: white;
+      color: black;
+      transform: rotateY(180deg);
+      border: 2px solid #ccc;
+    }
+    .card.matched {
+      visibility: hidden;
+    }
+    #next-btn, #start-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+    #win-message, #start-screen, #gameover-message {
+      font-size: 24px;
+      margin-top: 20px;
+    }
+    #timer {
+      font-size: 20px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="container">
+  <h1>Flip the cards</h1>
+  <div id="start-screen">
+    <p>Hãy bấm lật các lá bài để tìm được các lá bài cùng loại</p>
+    <button id="start-btn">Start</button>
+  </div>
+
+  <div id="game-content" style="display:none">
+    <div id="timer">⏱️ 01:00</div>
+    <div id="game-board"></div>
+    <button id="next-btn" style="display:none">Next Level</button>
+    <div id="win-message" style="display:none">🎉 Well done! 🎉</div>
+    <div id="gameover-message" style="display:none">⏳ Time's up! Game Over!</div>
+  </div>
+</div>
+
+<!-- Âm thanh -->
+<audio id="bg-music" src="bgmusic.mp3" loop></audio>
+<audio id="flip-sound" src="flipcard.mp3"></audio>
+<audio id="match-sound" src="matchsound.mp3"></audio>
+<audio id="win-sound" src="winsound.mp3"></audio>
+<audio id="encourage-sound"></audio>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script>
+  const board = document.getElementById('game-board');
+  const nextBtn = document.getElementById('next-btn');
+  const winMessage = document.getElementById('win-message');
+  const bgMusic = document.getElementById('bg-music');
+  const flipSound = document.getElementById('flip-sound');
+  const matchSound = document.getElementById('match-sound');
+  const winSound = document.getElementById('win-sound');
+  const encourageSound = document.getElementById('encourage-sound');
+  const startScreen = document.getElementById('start-screen');
+  const startBtn = document.getElementById('start-btn');
+  const gameContent = document.getElementById('game-content');
+  const timerDisplay = document.getElementById('timer');
+  const gameOverMsg = document.getElementById('gameover-message');
+
+  let level = 0;
+  const maxLevel = 12;
+  let timer = 60;
+  let timerInterval;
+
+  const getLevelGrid = (level) => {
+    if (level <= 5) return [2, 3];
+    if (level <= 8) return [2, 4];
+    if (level <= 10) return [3, 4];
+    return [4, 5];
+  };
+
+  const encouragements = ["Well done!", "Perfect!", "Excellent!", "Good job!", "Bravo!", "Great work!", "Awesome!", "Fantastic!", "Superb!", "Nice work!", "Kudos!", "Terrific!"];
+
+  let firstCard = null;
+  let lockBoard = false;
+
+  document.body.addEventListener('click', () => {
+    if (bgMusic.paused) {
+      bgMusic.volume = 0.1;
+      bgMusic.play().catch(() => {});
+    }
+  }, { once: true });
+
+  function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  function createBoard(rows, cols) {
+    board.innerHTML = '';
+    board.style.gridTemplateColumns = `repeat(${cols}, 80px)`;
+
+    const total = rows * cols;
+    const pairCount = total / 2;
+    let numbers = [];
+
+    for (let i = 0; i < pairCount; i++) {
+      const num = i % 10;
+      numbers.push(num, num);
+    }
+
+    shuffle(numbers);
+
+    numbers.forEach((num) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.value = num;
+
+      const cardInner = document.createElement('div');
+      cardInner.className = 'card-inner';
+
+      const front = document.createElement('div');
+      front.className = 'card-face card-front';
+      front.textContent = '';
+
+      const back = document.createElement('div');
+      back.className = 'card-face card-back';
+      back.textContent = num;
+
+      cardInner.appendChild(front);
+      cardInner.appendChild(back);
+      card.appendChild(cardInner);
+
+      card.addEventListener('click', () => revealCard(card));
+      board.appendChild(card);
+    });
+  }
+
+  function playSound(sound) {
+    sound.currentTime = 0;
+    sound.play().catch(() => {});
+  }
+
+  function playEncouragement() {
+    const text = encouragements[Math.floor(Math.random() * encouragements.length)];
+    const utterance = new SpeechSynthesisUtterance(text);
+    speechSynthesis.speak(utterance);
+  }
+
+  function revealCard(card) {
+    if (lockBoard || card.classList.contains('revealed') || card.classList.contains('matched')) return;
+
+    card.classList.add('revealed');
+    playSound(flipSound);
+
+    if (!firstCard) {
+      firstCard = card;
+    } else {
+      lockBoard = true;
+      setTimeout(() => {
+        if (firstCard.dataset.value === card.dataset.value) {
+          firstCard.classList.add('matched');
+          card.classList.add('matched');
+          playSound(matchSound);
+          playEncouragement();
+          checkWin();
+        } else {
+          firstCard.classList.remove('revealed');
+          card.classList.remove('revealed');
+        }
+        firstCard = null;
+        lockBoard = false;
+      }, 800);
+    }
+  }
+
+  function checkWin() {
+    const unmatched = document.querySelectorAll('.card:not(.matched)');
+    if (unmatched.length === 0) {
+      clearInterval(timerInterval);
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+
+      if (level + 1 >= maxLevel) {
+        playSound(winSound);
+        winMessage.style.display = 'block';
+        nextBtn.style.display = 'none';
+      } else {
+        nextBtn.style.display = 'inline-block';
+      }
+    }
+  }
+
+  nextBtn.onclick = () => {
+    level++;
+    nextBtn.style.display = 'none';
+    startLevel();
+  }
+
+  function startLevel() {
+    winMessage.style.display = 'none';
+    gameOverMsg.style.display = 'none';
+    const [rows, cols] = getLevelGrid(level);
+    createBoard(rows, cols);
+    resetTimer();
+  }
+
+  function resetTimer() {
+    clearInterval(timerInterval);
+    timer = 60;
+    updateTimer();
+    timerInterval = setInterval(() => {
+      timer--;
+      updateTimer();
+      if (timer <= 0) {
+        clearInterval(timerInterval);
+        gameOverMsg.style.display = 'block';
+        lockBoard = true;
+      }
+    }, 1000);
+  }
+
+  function updateTimer() {
+    const min = String(Math.floor(timer / 60)).padStart(2, '0');
+    const sec = String(timer % 60).padStart(2, '0');
+    timerDisplay.textContent = `⏱️ ${min}:${sec}`;
+  }
+
+  startBtn.onclick = () => {
+    startScreen.style.display = 'none';
+    gameContent.style.display = 'block';
+    startLevel();
+  }
+</script>
+
+</body>
+</html>
