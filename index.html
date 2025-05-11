@@ -108,6 +108,7 @@
 <audio id="flip-sound" src="flipcard.mp3"></audio>
 <audio id="match-sound" src="matchsound.mp3"></audio>
 <audio id="win-sound" src="winsound.mp3"></audio>
+<audio id="button-sound" src="bottonsound.mp3"></audio>
 <audio id="encourage-sound"></audio>
 
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -120,6 +121,7 @@
   const flipSound = document.getElementById('flip-sound');
   const matchSound = document.getElementById('match-sound');
   const winSound = document.getElementById('win-sound');
+  const bottonSound = document.getElementById('button-sound');
   const encourageSound = document.getElementById('encourage-sound');
   const startScreen = document.getElementById('start-screen');
   const startBtn = document.getElementById('start-btn');
@@ -259,6 +261,7 @@
     level++;
     nextBtn.style.display = 'none';
     startLevel();
+    playSound(bottonSound);
   }
 
   function startLevel() {
@@ -291,6 +294,7 @@
   }
 
   startBtn.onclick = () => {
+    playSound(bottonSound);
     startScreen.style.display = 'none';
     gameContent.style.display = 'block';
     startLevel();
@@ -299,6 +303,7 @@ restartBtn.onclick = () => {
   level = 0;
   startLevel();
   gameOverMsg.style.display = 'none';
+  playSound(bottonSound);
   lockBoard = false;
 };
 restartWinBtn.onclick = () => {
@@ -306,6 +311,7 @@ restartWinBtn.onclick = () => {
   winMessage.style.display = 'none';
   nextBtn.style.display = 'none';
   lockBoard = false;
+  playSound(bottonSound);
   startLevel();
 };
 
