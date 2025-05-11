@@ -92,8 +92,14 @@
     <div id="timer">⏱️ 01:00</div>
     <div id="game-board"></div>
     <button id="next-btn" style="display:none">Next Level</button>
-    <div id="win-message" style="display:none">🎉 Well done! 🎉</div>
-    <div id="gameover-message" style="display:none">⏳ Time's up! Game Over!</div>
+    <div id="win-message" style="display:none">
+      🎉 Well done! 🎉<br>
+      <button id="restart-win-btn" style="margin-top: 10px;">Restart</button>
+    </div>
+    <div id="gameover-message" style="display:none">
+      ⏳ Time's up! Game Over!<br>
+      <button id="restart-btn">Restart</button>
+    </div>
   </div>
 </div>
 
@@ -109,6 +115,7 @@
   const board = document.getElementById('game-board');
   const nextBtn = document.getElementById('next-btn');
   const winMessage = document.getElementById('win-message');
+  const restartWinBtn = document.getElementById('restart-win-btn');
   const bgMusic = document.getElementById('bg-music');
   const flipSound = document.getElementById('flip-sound');
   const matchSound = document.getElementById('match-sound');
@@ -119,6 +126,8 @@
   const gameContent = document.getElementById('game-content');
   const timerDisplay = document.getElementById('timer');
   const gameOverMsg = document.getElementById('gameover-message');
+  const restartBtn = document.getElementById('restart-btn');
+
 
   let level = 0;
   const maxLevel = 12;
@@ -126,7 +135,7 @@
   let timerInterval;
 
   const getLevelGrid = (level) => {
-    if (level <= 5) return [2, 3];
+    if (level <= 4) return [2, 3];
     if (level <= 8) return [2, 4];
     if (level <= 10) return [3, 4];
     return [4, 5];
@@ -139,7 +148,7 @@
 
   document.body.addEventListener('click', () => {
     if (bgMusic.paused) {
-      bgMusic.volume = 0.1;
+      bgMusic.volume = 0.3;
       bgMusic.play().catch(() => {});
     }
   }, { once: true });
@@ -286,6 +295,20 @@
     gameContent.style.display = 'block';
     startLevel();
   }
+restartBtn.onclick = () => {
+  level = 0;
+  startLevel();
+  gameOverMsg.style.display = 'none';
+  lockBoard = false;
+};
+restartWinBtn.onclick = () => {
+  level = 0;
+  winMessage.style.display = 'none';
+  nextBtn.style.display = 'none';
+  lockBoard = false;
+  startLevel();
+};
+
 </script>
 
 </body>
